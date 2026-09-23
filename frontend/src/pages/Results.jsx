@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import API from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
-import { User, Award, Save, RefreshCw, CheckCircle, AlertCircle, Calendar, Hash } from 'lucide-react';
+import { User, Award, Save, RefreshCw, AlertTriangle, BookOpen, Layers, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Results() {
@@ -12,9 +12,9 @@ export default function Results() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [semester, setSemester] = useState(1);
 
-  const [subjects, setSubjects] = useState([]);
+  const [sheetItems, setSheetItems] = useState([]);
   const [gradeScale, setGradeScale] = useState([]);
-  const [marksState, setMarksState] = useState({}); // { subject_id: { grade_letter, grade_point, is_pass } }
+  const [marksState, setMarksState] = useState({}); // { subject_id: { grade_letter, grade_point, is_pass, attempt } }
   const [savedResults, setSavedResults] = useState([]);
 
   const [loading, setLoading] = useState(false);
@@ -38,7 +38,7 @@ export default function Results() {
     }
   };
 
-  // 2. Fetch selected Student details + Grade Scale
+  // 2. Fetch selected Student details + Grade Scale + Historical Results
   useEffect(() => {
     if (!selectedReg) return;
     const stu = students.find((s) => s.reg_no === selectedReg);
@@ -67,49 +67,33 @@ export default function Results() {
     }
   };
 
-  // 3. Fetch Subjects & existing Marks when Student or Semester changes
+  // 3. Fetch Semester Sheet (Regular Subjects + Active Arrears Carried Over)
   useEffect(() => {
     if (selectedStudent && semester) {
-      fetchSubjectsAndMarks();
+      fetchSemesterSheet();
     }
   }, [selectedStudent, semester]);
 
-  const fetchSubjectsAndMarks = async () => {
+  const fetchSemesterSheet = async () => {
     setLoading(true);
     try {
-      // Fetch subjects for course, sem, regulation
-      const subRes = await API.get(
-        `/subjects?course_id=${selectedStudent.course_id}&semester=${semester}&regulation=${selectedStudent.regulation}`
-      );
-      setSubjects(subRes.data);
+      // Calls Anna University standard semester sheet generator
+      const res = await API.get(`/semester-sheet?reg_no=${selectedStudent.reg_no}&semester=${semester}`);
+      setSheetItems(res.data);
 
-      // Fetch existing marks
-      const markRes = await API.get(`/marks?reg_no=${selectedStudent.reg_no}&semester=${semester}`);
-      
       const initialMarks = {};
-      subRes.data.forEach((sub) => {
-        const existing = markRes.data.find((m) => m.subject_id === sub.subject_id);
-        if (existing) {
-          initialMarks[sub.subject_id] = {
-            grade_letter: existing.grade_letter,
-            grade_point: existing.grade_point,
-            is_pass: existing.is_pass,
-            attempt: existing.attempt || 1,
-          };
-        } else {
-          // Default unassigned
-          initialMarks[sub.subject_id] = {
-            grade_letter: '',
-            grade_point: 0.0,
-            is_pass: true,
-            attempt: 1,
-          };
-        }
+      res.data.forEach((item) => {
+        initialMarks[item.subject_id] = {
+          grade_letter: item.grade_letter || '',
+          grade_point: item.grade_point || 0.0,
+          is_pass: item.is_pass,
+          attempt: item.attempt || 1,
+        };
       });
       setMarksState(initialMarks);
     } catch (err) {
       console.error(err);
-      toast.error('Failed to load semester subjects or marks');
+      toast.error('Failed to load semester evaluation sheet');
     } finally {
       setLoading(false);
     }
@@ -124,7 +108,7 @@ export default function Results() {
         ...prev[subject_id],
         grade_letter: letter,
         grade_point: scale ? scale.grade_point : 0.0,
-        is_pass: scale ? scale.is_pass : true,
+        is_pass: scale ? scale.is_pass : (letter !== 'U' && letter !== 'SA' && letter !== 'WH' && letter !== 'WC'),
       },
     }));
   };
@@ -133,34 +117,34 @@ export default function Results() {
   const calculateLiveSGPA = () => {
     let totalCP = 0;
     let totalCR = 0;
-    subjects.forEach((sub) => {
-      const m = marksState[sub.subject_id];
+    sheetItems.forEach((item) => {
+      const m = marksState[item.subject_id];
       if (m && m.grade_letter) {
-        totalCP += sub.credits * m.grade_point;
-        totalCR += sub.credits;
+        totalCP += item.credits * m.grade_point;
+        totalCR += item.credits;
       }
     });
     return totalCR > 0 ? (totalCP / totalCR).toFixed(2) : '0.00';
   };
 
   const calculateTotalCredits = () => {
-    return subjects.reduce((acc, sub) => acc + sub.credits, 0);
+    return sheetItems.reduce((acc, item) => acc + item.credits, 0);
   };
 
   // Save marks to API
   const handleSaveMarks = async () => {
     const markList = [];
-    for (const sub of subjects) {
-      const m = marksState[sub.subject_id];
+    for (const item of sheetItems) {
+      const m = marksState[item.subject_id];
       if (!m || !m.grade_letter) {
-        toast.error(`Please select grade for ${sub.subject_code}`);
+        toast.error(`Please select grade for ${item.subject_code}`);
         return;
       }
       markList.push({
-        subject_id: sub.subject_id,
+        subject_id: item.subject_id,
         grade_letter: m.grade_letter,
         grade_point: m.grade_point,
-        attempt: m.attempt || 1,
+        attempt: item.attempt, // Incremented attempt
         is_pass: m.is_pass,
       });
     }
@@ -173,8 +157,10 @@ export default function Results() {
         marks: markList,
       };
       const res = await API.post('/marks', payload);
-      toast.success(`Marks saved successfully! SGPA: ${res.data.sgpa}`);
+      toast.success(`Marks saved successfully! SGPA: ${res.data.sgpa} | CGPA: ${res.data.cgpa}`);
       fetchHistoricalResults(selectedStudent.reg_no);
+      // Reload sheet to refresh arrear status
+      fetchSemesterSheet();
     } catch (err) {
       console.error(err);
       toast.error('Failed to save marks');
@@ -182,6 +168,8 @@ export default function Results() {
       setSaving(false);
     }
   };
+
+  const arrearCount = sheetItems.filter((i) => i.is_arrear).length;
 
   return (
     <div className="results-container">
@@ -211,6 +199,11 @@ export default function Results() {
             <span className="text-xs font-semibold px-2.5 py-1 rounded bg-emerald-100 text-emerald-800">
               Batch: {selectedStudent?.batch_year || 2024}
             </span>
+            {arrearCount > 0 && (
+              <span className="text-xs font-bold px-2.5 py-1 rounded bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                <AlertTriangle size={14} /> {arrearCount} Active Arrear{arrearCount > 1 ? 's' : ''} Carried Over
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -254,21 +247,26 @@ export default function Results() {
 
       {/* Results Table & Grade Entry */}
       <div className="table-card">
-        <div className="table-header-title">
-          <h3>
-            <Award className="inline mr-2 text-blue-700" size={20} />
-            Semester {semester} Result Entry Sheet ({selectedStudent?.regulation || 'R2021'})
-          </h3>
-          <span className="text-sm text-gray-500 font-normal">
-            Grading Scale: {selectedStudent?.regulation === 'R2025' ? 'Absolute (S, A+, A, B+, B, C+, C, U)' : 'Relative (O, A+, A, B+, B, C, U)'}
+        <div className="table-header-title flex justify-between items-center">
+          <div>
+            <h3>
+              <Award className="inline mr-2 text-blue-700" size={20} />
+              Semester {semester} Evaluation Sheet ({selectedStudent?.regulation || 'R2021'})
+            </h3>
+            <p className="text-xs text-gray-500 mt-1">
+              Includes regular semester subjects + active arrear subjects carried over from earlier semesters (Anna University Standard).
+            </p>
+          </div>
+          <span className="text-xs font-medium text-gray-600 bg-gray-100 px-3 py-1 rounded">
+            Scale: {selectedStudent?.regulation === 'R2025' ? 'Absolute (S, A+, A, B+, B, C+, C, U)' : 'Relative (O, A+, A, B+, B, C, U)'}
           </span>
         </div>
 
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading subjects and marks data...</div>
-        ) : subjects.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">Loading semester subjects and carryover arrears...</div>
+        ) : sheetItems.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
-            No subjects configured for Semester {semester} ({selectedStudent?.regulation}) yet. Use Admin Panel to add subjects.
+            No subjects configured for Semester {semester} ({selectedStudent?.regulation}) yet.
           </div>
         ) : (
           <>
@@ -277,36 +275,55 @@ export default function Results() {
                 <thead>
                   <tr>
                     <th>S.No</th>
-                    <th>Subject Code</th>
+                    <th>Code</th>
                     <th>Subject Title</th>
+                    <th>Category</th>
                     <th>Credits</th>
-                    <th>Type</th>
+                    <th>Attempt</th>
                     <th>Grade Letter</th>
                     <th>Grade Point</th>
                     <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {subjects.map((sub, idx) => {
-                    const mark = marksState[sub.subject_id] || { grade_letter: '', grade_point: 0, is_pass: true };
+                  {sheetItems.map((item, idx) => {
+                    const mark = marksState[item.subject_id] || { grade_letter: '', grade_point: 0, is_pass: true };
                     return (
-                      <tr key={sub.subject_id}>
+                      <tr key={item.subject_id} className={item.is_arrear ? 'bg-amber-50/50' : ''}>
                         <td className="text-center font-medium">{idx + 1}</td>
-                        <td className="font-mono font-bold text-blue-900">{sub.subject_code}</td>
-                        <td className="font-medium text-gray-800">{sub.subject_name}</td>
-                        <td className="text-center font-semibold">{sub.credits}</td>
+                        <td className="font-mono font-bold text-blue-900">{item.subject_code}</td>
+                        <td className="font-medium text-gray-800">
+                          {item.subject_name}
+                          {item.is_arrear && (
+                            <div className="text-xs text-amber-700 font-semibold mt-0.5">
+                              ⚠️ Arrear from Semester {item.original_semester} (Attempt {item.attempt})
+                            </div>
+                          )}
+                        </td>
                         <td className="text-center text-xs">
-                          <span className={`px-2 py-0.5 rounded ${sub.subject_type === 'Theory' ? 'bg-indigo-50 text-indigo-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                            {sub.subject_type}
+                          {item.is_arrear ? (
+                            <span className="px-2 py-0.5 rounded font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                              ARREAR
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded font-medium bg-blue-50 text-blue-700">
+                              Regular
+                            </span>
+                          )}
+                        </td>
+                        <td className="text-center font-semibold">{item.credits}</td>
+                        <td className="text-center font-mono font-bold text-xs">
+                          <span className={`px-2 py-0.5 rounded ${item.attempt > 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
+                            Attempt {item.attempt}
                           </span>
                         </td>
                         <td className="text-center">
                           <select
                             value={mark.grade_letter}
-                            onChange={(e) => handleGradeChange(sub.subject_id, e.target.value)}
+                            onChange={(e) => handleGradeChange(item.subject_id, e.target.value)}
                             className="grade-select"
                           >
-                            <option value="">-- Select Grade --</option>
+                            <option value="">-- Grade --</option>
                             {gradeScale.map((g) => (
                               <option key={g.id} value={g.grade_letter}>
                                 {g.grade_letter} ({g.grade_point} pts)
@@ -320,7 +337,9 @@ export default function Results() {
                         <td className="text-center">
                           {mark.grade_letter ? (
                             mark.is_pass ? (
-                              <span className="status-pass">PASS</span>
+                              <span className="status-pass flex items-center justify-center gap-1">
+                                <CheckCircle2 size={12} /> PASS
+                              </span>
                             ) : (
                               <span className="status-fail">RE-APPEAR</span>
                             )
@@ -339,18 +358,18 @@ export default function Results() {
             <div className="table-footer-bar">
               <div className="flex items-center gap-6">
                 <div>
-                  <span className="text-gray-600 text-sm">Total Semester Credits: </span>
+                  <span className="text-gray-600 text-sm">Exam Credits: </span>
                   <span className="font-bold text-gray-800 text-base">{calculateTotalCredits()}</span>
                 </div>
                 <div>
-                  <span className="text-gray-600 text-sm">Calculated SGPA: </span>
+                  <span className="text-gray-600 text-sm">Current SGPA: </span>
                   <span className="font-bold text-blue-800 text-xl font-mono">{calculateLiveSGPA()}</span>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <button
-                  onClick={fetchSubjectsAndMarks}
+                  onClick={fetchSemesterSheet}
                   className="btn-secondary"
                   disabled={saving}
                 >

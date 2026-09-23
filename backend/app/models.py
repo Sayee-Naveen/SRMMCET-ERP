@@ -3,6 +3,13 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
 
+class Department(Base):
+    __tablename__ = "departments"
+
+    dept_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    dept_name = Column(String(100), nullable=False, unique=True)
+    dept_code = Column(String(20), nullable=False, unique=True)
+
 class Course(Base):
     __tablename__ = "courses"
 
@@ -33,6 +40,7 @@ class Student(Base):
 
     course = relationship("Course", back_populates="students")
     section_assignments = relationship("SectionStudent", back_populates="student")
+    faculty_assignments = relationship("FacultyStudent", back_populates="student")
 
 class GradeScale(Base):
     __tablename__ = "grade_scale"
@@ -74,6 +82,7 @@ class Faculty(Base):
     is_active = Column(Boolean, default=True)
 
     assigned_sections = relationship("FacultySection", back_populates="faculty")
+    assigned_students = relationship("FacultyStudent", back_populates="faculty")
 
 class Section(Base):
     __tablename__ = "sections"
@@ -107,6 +116,16 @@ class FacultySection(Base):
 
     faculty = relationship("Faculty", back_populates="assigned_sections")
     section = relationship("Section", back_populates="faculty_assignments")
+
+class FacultyStudent(Base):
+    __tablename__ = "faculty_students"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    faculty_id = Column(Integer, ForeignKey("faculty.faculty_id"), nullable=False)
+    student_id = Column(Integer, ForeignKey("students.student_id"), nullable=False)
+
+    faculty = relationship("Faculty", back_populates="assigned_students")
+    student = relationship("Student", back_populates="faculty_assignments")
 
 class Mark(Base):
     __tablename__ = "marks"

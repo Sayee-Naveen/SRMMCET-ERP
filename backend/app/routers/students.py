@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from ..database import get_db
-from ..models import Student, FacultySection, SectionStudent, Faculty, Course
+from ..models import Student, FacultySection, SectionStudent, Faculty, Course, FacultyStudent
 from ..schemas import StudentOut
 from ..auth import get_current_user
 
@@ -13,15 +13,22 @@ def get_students(current_user: Faculty = Depends(get_current_user), db: Session 
     if current_user.role == "admin":
         return db.query(Student).filter(Student.is_active == True).all()
 
-    # Faculty scoped students
+    # Section assignments
     assigned_section_ids = [
         fs.section_id for fs in db.query(FacultySection).filter(FacultySection.faculty_id == current_user.faculty_id).all()
     ]
-    student_ids = [
+    section_student_ids = [
         ss.student_id for ss in db.query(SectionStudent).filter(SectionStudent.section_id.in_(assigned_section_ids)).all()
     ]
 
-    students = db.query(Student).filter(Student.student_id.in_(student_ids), Student.is_active == True).all()
+    # Direct faculty-student assignments
+    direct_student_ids = [
+        fs.student_id for fs in db.query(FacultyStudent).filter(FacultyStudent.faculty_id == current_user.faculty_id).all()
+    ]
+
+    all_assigned_ids = list(set(section_student_ids + direct_student_ids))
+
+    students = db.query(Student).filter(Student.student_id.in_(all_assigned_ids), Student.is_active == True).all()
     return students
 
 @router.get("/{reg_no}", response_model=StudentOut)

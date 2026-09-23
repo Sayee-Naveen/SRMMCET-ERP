@@ -15,6 +15,19 @@ class TokenResponse(BaseModel):
     username: str
     full_name: str
 
+# Department Schemas
+class DepartmentBase(BaseModel):
+    dept_name: str
+    dept_code: str
+
+class DepartmentCreate(DepartmentBase):
+    pass
+
+class DepartmentOut(DepartmentBase):
+    dept_id: int
+    class Config:
+        from_attributes = True
+
 # Course Schemas
 class CourseBase(BaseModel):
     course_name: str
@@ -44,6 +57,16 @@ class StudentBase(BaseModel):
 
 class StudentCreate(StudentBase):
     pass
+
+class StudentUpdate(BaseModel):
+    name: Optional[str] = None
+    reg_no: Optional[str] = None
+    course_id: Optional[int] = None
+    batch_year: Optional[int] = None
+    regulation: Optional[str] = None
+    current_sem: Optional[int] = None
+    section: Optional[str] = None
+    is_active: Optional[bool] = None
 
 class StudentOut(StudentBase):
     student_id: int
@@ -85,6 +108,19 @@ class GradeScaleOut(BaseModel):
         from_attributes = True
 
 # Mark Entry Schema
+class SemesterSheetItem(BaseModel):
+    subject_id: int
+    subject_code: str
+    subject_name: str
+    credits: float
+    subject_type: str
+    original_semester: int
+    is_arrear: bool
+    attempt: int
+    grade_letter: str = ""
+    grade_point: float = 0.0
+    is_pass: bool = True
+
 class MarkItem(BaseModel):
     subject_id: int
     grade_letter: str
@@ -129,6 +165,14 @@ class FacultyBase(BaseModel):
 class FacultyCreate(FacultyBase):
     password: str
 
+class FacultyUpdate(BaseModel):
+    username: Optional[str] = None
+    full_name: Optional[str] = None
+    department: Optional[str] = None
+    password: Optional[str] = None
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+
 class FacultyOut(FacultyBase):
     faculty_id: int
     is_active: bool
@@ -150,3 +194,6 @@ class SectionOut(SectionBase):
     course: Optional[CourseOut] = None
     class Config:
         from_attributes = True
+
+class AssignStudentsRequest(BaseModel):
+    student_ids: List[int]
