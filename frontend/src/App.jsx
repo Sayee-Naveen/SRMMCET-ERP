@@ -1,0 +1,61 @@
+import React, { useContext } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, AuthContext } from './context/AuthContext';
+import Header from './components/Header';
+import Login from './pages/Login';
+import Results from './pages/Results';
+import AdminDashboard from './pages/AdminDashboard';
+import { Toaster } from 'react-hot-toast';
+
+function ProtectedRoute({ children, adminOnly = false }) {
+  const { user, loading } = useContext(AuthContext);
+
+  if (loading) {
+    return <div className="p-8 text-center text-gray-500">Authenticating user...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (adminOnly && user.role !== 'admin') {
+    return <Navigate to="/results" replace />;
+  }
+
+  return children;
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <div className="app-shell">
+          <Toaster position="top-right" />
+          <Header />
+          <main className="main-content">
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route
+                path="/results"
+                element={
+                  <ProtectedRoute>
+                    <Results />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute adminOnly={true}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="*" element={<Navigate to="/results" replace />} />
+            </Routes>
+          </main>
+        </div>
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}
