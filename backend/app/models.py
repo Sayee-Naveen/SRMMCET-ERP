@@ -50,6 +50,8 @@ class Student(Base):
     section_assignments = relationship("SectionStudent", back_populates="student")
     faculty_assignments = relationship("FacultyStudent", back_populates="student")
     custom_subjects = relationship("StudentCustomSubject", back_populates="student")
+    medical_records = relationship("MedicalRecord", back_populates="student")
+    disciplinary_actions = relationship("DisciplinaryAction", back_populates="student")
 
 class GradeScale(Base):
     __tablename__ = "grade_scale"
@@ -180,3 +182,41 @@ class SemesterResult(Base):
     cgpa = Column(Float, nullable=False)
     total_credits = Column(Float, nullable=False)
     computed_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class MedicalRecord(Base):
+    __tablename__ = "medical_records"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    student_id = Column(Integer, ForeignKey("students.student_id"), nullable=False, index=True)
+    record_type = Column(String(50), nullable=False) # Routine Checkup, Emergency, Medical Leave, Chronic Condition, Allergy Notice
+    incident_date = Column(String(20), nullable=False)
+    diagnosis_details = Column(Text, nullable=False)
+    doctor_hospital_name = Column(String(150), nullable=True)
+    treatment_prescribed = Column(Text, nullable=True)
+    document_url = Column(String(255), nullable=True)
+    signature_url = Column(String(255), nullable=True)
+    recorded_by = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    student = relationship("Student", back_populates="medical_records")
+
+class DisciplinaryAction(Base):
+    __tablename__ = "disciplinary_actions"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    student_id = Column(Integer, ForeignKey("students.student_id"), nullable=False, index=True)
+    incident_date = Column(String(20), nullable=False)
+    action_date = Column(String(20), nullable=False)
+    category = Column(String(100), nullable=False) # Attendance Shortage, Misconduct, Academic Malpractice, Property Damage, Other
+    report_description = Column(Text, nullable=False)
+    action_taken = Column(String(100), nullable=False) # Verbal Warning, Written Warning, Parent Summoned, Fine Imposed, Suspension, Expulsion
+    status = Column(String(30), default="Active") # Pending Review, Active, Resolved, Revoked
+    supporting_doc_url = Column(String(255), nullable=True)
+    student_signature_url = Column(String(255), nullable=True)
+    authority_signature_url = Column(String(255), nullable=True)
+    recorded_by = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    student = relationship("Student", back_populates="disciplinary_actions")

@@ -157,6 +157,7 @@ export default function AdminDashboard() {
       toast.success('Students assigned!');
       setSelectedStudentIdsToAssign([]);
       fetchFacultyAssignedStudents(selectedFacultyForAssignment);
+      loadAllData();
     } catch (err) { toast.error('Failed to assign students'); }
   };
   const handleRemoveStudentFromFaculty = async (studentId) => {
@@ -164,6 +165,7 @@ export default function AdminDashboard() {
       await API.delete(`/admin/faculty/${selectedFacultyForAssignment}/remove-student/${studentId}`);
       toast.success('Assignment removed');
       fetchFacultyAssignedStudents(selectedFacultyForAssignment);
+      loadAllData();
     } catch (err) { toast.error('Failed to remove assignment'); }
   };
 

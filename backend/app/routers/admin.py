@@ -213,13 +213,13 @@ def get_all_faculty(db: Session = Depends(get_db)):
     res = []
     for f in faculties:
         # Count direct students
-        direct_count = db.query(FacultyStudent).filter(FacultyStudent.faculty_id == f.faculty_id).count()
+        direct_ids = [fs.student_id for fs in db.query(FacultyStudent).filter(FacultyStudent.faculty_id == f.faculty_id).all()]
         # Count section students
         sec_ids = [fs.section_id for fs in db.query(FacultySection).filter(FacultySection.faculty_id == f.faculty_id).all()]
-        sec_count = db.query(SectionStudent).filter(SectionStudent.section_id.in_(sec_ids)).count() if sec_ids else 0
+        sec_student_ids = [ss.student_id for ss in db.query(SectionStudent).filter(SectionStudent.section_id.in_(sec_ids)).all()] if sec_ids else []
 
         f_out = FacultyOut.model_validate(f)
-        f_out.assigned_students_count = direct_count + sec_count
+        f_out.assigned_students_count = len(set(direct_ids + sec_student_ids))
         res.append(f_out)
     return res
 
@@ -291,14 +291,23 @@ def assign_students_to_faculty(faculty_id: int, req: AssignStudentsRequest, db: 
 
 @router.delete("/faculty/{faculty_id}/remove-student/{student_id}")
 def remove_student_from_faculty(faculty_id: int, student_id: int, db: Session = Depends(get_db)):
-    record = db.query(FacultyStudent).filter(
+    # 1. Remove direct mentor assignment if exists
+    db.query(FacultyStudent).filter(
         FacultyStudent.faculty_id == faculty_id,
         FacultyStudent.student_id == student_id
-    ).first()
-    if record:
-        db.delete(record)
-        db.commit()
-    return {"message": "Student assignment removed"}
+    ).delete(synchronize_session=False)
+
+    # 2. Also remove from any section assignments associated with this faculty
+    fac_sections = db.query(FacultySection).filter(FacultySection.faculty_id == faculty_id).all()
+    sec_ids = [fs.section_id for fs in fac_sections]
+    if sec_ids:
+        db.query(SectionStudent).filter(
+            SectionStudent.student_id == student_id,
+            SectionStudent.section_id.in_(sec_ids)
+        ).delete(synchronize_session=False)
+
+    db.commit()
+    return {"message": "Student assignment removed successfully"}
 
 # --- SECTIONS CRUD ---
 @router.get("/sections", response_model=List[SectionOut])
