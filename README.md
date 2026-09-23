@@ -1,6 +1,6 @@
 ﻿# Faculty-Student Academic Management System
 
-> **MASTER PROMPT — FACULTY & STUDENT MANAGEMENT MODULE**
+> **FACULTY & STUDENT MANAGEMENT MODULE**
 >
 > A production-ready, modular Faculty-Student Management module for a college administration system.
 > Designed to digitally replace the information maintained in the college **Student's Data Book**.
