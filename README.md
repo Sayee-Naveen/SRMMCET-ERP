@@ -1,4 +1,4 @@
-﻿# Faculty-Student Academic Management System
+# Faculty-Student Academic Management System
 
 > **FACULTY & STUDENT MANAGEMENT MODULE**
 >
@@ -1124,46 +1124,130 @@ At the end of implementation, provide:
 ## Suggested Project Structure
 
 ```
-faculty-student-module/
-+-- backend/
-|   +-- src/
-|   |   +-- auth/
-|   |   +-- admin/
-|   |   +-- faculty/
-|   |   +-- students/
-|   |   +-- academic/
-|   |   +-- attendance/
-|   |   +-- marks/
-|   |   +-- results/
-|   |   +-- arrears/
-|   |   +-- placements/
-|   |   +-- counseling/
-|   |   +-- parent-meetings/
-|   |   +-- reports/
-|   |   +-- audit-logs/
-|   |   +-- uploads/
-|   |   +-- common/
-|   +-- migrations/
-|   +-- seeds/
-|   +-- tests/
-+-- frontend/
-|   +-- src/
-|   |   +-- pages/
-|   |   |   +-- admin/
-|   |   |   +-- faculty/
-|   |   +-- components/
-|   |   +-- hooks/
-|   |   +-- services/
-|   |   +-- store/
-|   |   +-- utils/
-|   +-- public/
-+-- docs/
-|   +-- api.md
-|   +-- database-schema.md
-|   +-- deployment.md
-+-- .env.example
-+-- docker-compose.yml
-+-- README.md
+history-card-system/
+│
+├── .gitignore
+├── README.md
+│
+├── docs/
+│   ├── 01_REQUIREMENTS.md
+│   ├── 02_DATABASE_SCHEMA.md
+│   └── 03_API_CONTRACTS.md
+│
+├── database/
+│   ├── init.sql
+│   └── seed_data.sql
+│
+├── backend/
+│   ├── requirements.txt
+│   ├── main.py
+│   │
+│   ├── core/
+│   │   ├── _init_.py
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   ├── security.py
+│   │   └── dependencies.py
+│   │
+│   ├── models/
+│   │   ├── _init_.py
+│   │   ├── user.py
+│   │   ├── faculty.py
+│   │   ├── student.py
+│   │   ├── subject.py
+│   │   ├── academic.py
+│   │   ├── personal.py
+│   │   ├── curricular.py
+│   │   ├── extracurricular.py
+│   │   └── medical.py
+│   │
+│   ├── schemas/
+│   │   ├── _init_.py
+│   │   ├── auth.py
+│   │   ├── faculty.py
+│   │   ├── student.py
+│   │   ├── academic.py
+│   │   ├── personal.py
+│   │   ├── curricular.py
+│   │   ├── extracurricular.py
+│   │   └── medical.py
+│   │
+│   └── routers/
+│       ├── _init_.py
+│       ├── auth.py
+│       ├── admin.py
+│       ├── students.py
+│       ├── academic.py
+│       ├── personal.py
+│       ├── curricular.py
+│       ├── extracurricular.py
+│       └── medical.py
+│
+├── frontend/
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── tailwind.config.js
+│   ├── index.html
+│   │
+│   └── src/
+│       ├── main.jsx
+│       ├── App.jsx
+│       │
+│       ├── api/
+│       │   ├── axios.js
+│       │   ├── authApi.js
+│       │   ├── studentApi.js
+│       │   ├── academicApi.js
+│       │   ├── personalApi.js
+│       │   ├── curricularApi.js
+│       │   ├── extracurricularApi.js
+│       │   └── medicalApi.js
+│       │
+│       ├── context/
+│       │   ├── AuthContext.jsx
+│       │   └── ThemeContext.jsx
+│       │
+│       ├── components/
+│       │   ├── common/
+│       │   │   ├── Button.jsx
+│       │   │   ├── Modal.jsx
+│       │   │   ├── Table.jsx
+│       │   │   ├── Input.jsx
+│       │   │   └── Loading.jsx
+│       │   │
+│       │   └── layout/
+│       │       ├── Navbar.jsx
+│       │       ├── Sidebar.jsx
+│       │       └── PageLayout.jsx
+│       │
+│       └── pages/
+│           ├── auth/
+│           │   └── Login.jsx
+│           │
+│           ├── admin/
+│           │   ├── Dashboard.jsx
+│           │   ├── FacultyManagement.jsx
+│           │   ├── StudentManagement.jsx
+│           │   └── FacultyStudentAssignment.jsx
+│           │
+│           ├── faculty/
+│           │   ├── Dashboard.jsx
+│           │   └── AssignedStudents.jsx
+│           │
+│           └── student/
+│               ├── StudentHistoryCard.jsx
+│               ├── PersonalDetails.jsx
+│               ├── AcademicRecords.jsx
+│               ├── Curricular.jsx
+│               ├── ExtraCurricular.jsx
+│               └── MedicalDisciplinary.jsx
+│
+└── tests/
+    ├── backend/
+    │   └── .gitkeep
+    │
+    └── frontend/
+        └── .gitkeep
 ```
 
 ---
