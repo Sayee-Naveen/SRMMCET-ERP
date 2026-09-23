@@ -1,17 +1,19 @@
 import React, { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { LogOut, User, Shield, BookOpen, Heart, Trophy } from 'lucide-react';
+import { LogOut, User, LayoutDashboard, Trophy, Award, FileCheck } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 export default function Header() {
   const { user, logout } = useContext(AuthContext);
-  const navigate = useNavigate();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  const isActive = (path) => location.pathname === path;
 
   return (
     <header className="erp-header">
@@ -25,51 +27,59 @@ export default function Header() {
           />
           <div className="college-title">
             <h1>SRM MADURAI COLLEGE FOR ENGINEERING & TECHNOLOGY</h1>
-            <p>Affiliated to Anna University, Chennai | Approved by AICTE, New Delhi</p>
+            <p>Affiliated to Anna University, Chennai | Extra-Curricular & Student Achievements Cell</p>
           </div>
         </div>
 
-        {user && (
+        {user ? (
           <div className="user-badge-area">
             <div className="user-info">
               <span className="user-name">
-                <User size={16} className="inline mr-1" />
-                {user.fullName}
+                <User size={15} className="inline mr-1" />
+                {user.full_name}
               </span>
               <span className={`user-role ${user.role}`}>
                 {user.role.toUpperCase()}
               </span>
             </div>
             <button onClick={handleLogout} className="logout-btn" title="Logout">
-              <LogOut size={18} /> Logout
+              <LogOut size={16} /> Logout
             </button>
           </div>
+        ) : (
+          <Link to="/login" className="btn-gold text-xs py-1 px-3">
+            Sign In
+          </Link>
         )}
       </div>
 
       {user && (
         <nav className="header-nav">
           <div className="nav-links">
-            <Link to="/results" className={`nav-link ${location.pathname === '/results' ? 'active' : ''}`}>
-              <BookOpen size={16} /> Semester Results Module
-            </Link>
-            <Link to="/medical-disciplinary" className={`nav-link ${location.pathname === '/medical-disciplinary' ? 'active' : ''}`}>
-              <Heart size={16} /> Medical & Disciplinary
-            </Link>
-            <a
-              href="http://localhost:5174"
-              target="_blank"
-              rel="noreferrer"
-              className="nav-link"
-              title="Open Extra-Curricular Activities Module in separate window"
+            <Link
+              to="/dashboard"
+              className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`}
             >
-              <Trophy size={16} /> Extra-Curricular Activities
-            </a>
-            {user.role === 'admin' && (
-              <Link to="/admin" className={`nav-link admin-link ${location.pathname === '/admin' ? 'active' : ''}`}>
-                <Shield size={16} /> Admin Control Panel
-              </Link>
-            )}
+              <LayoutDashboard size={16} /> Overview & KPIs
+            </Link>
+            <Link
+              to="/activities"
+              className={`nav-link ${isActive('/activities') ? 'active' : ''}`}
+            >
+              <Trophy size={16} /> Activities & Events
+            </Link>
+            <Link
+              to="/portfolio"
+              className={`nav-link ${isActive('/portfolio') ? 'active' : ''}`}
+            >
+              <Award size={16} /> Student EC Portfolio
+            </Link>
+            <Link
+              to="/certificates"
+              className={`nav-link ${isActive('/certificates') ? 'active' : ''}`}
+            >
+              <FileCheck size={16} /> Certificate Documents
+            </Link>
           </div>
         </nav>
       )}
