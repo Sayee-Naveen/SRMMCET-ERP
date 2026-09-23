@@ -18,11 +18,13 @@ env/
 venv/
 .venv/
 
-# Database files
+# Database & Upload files
 *.db
 *.sqlite3
 srm_erp.db
 backend/srm_erp.db
+backend/uploads/*
+!backend/uploads/.gitkeep
 
 # Environment variables
 .env

@@ -1,11 +1,12 @@
 import React, { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { LogOut, User, Shield, BookOpen } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { LogOut, User, Shield, BookOpen, Heart } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 export default function Header() {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
@@ -49,11 +50,14 @@ export default function Header() {
       {user && (
         <nav className="header-nav">
           <div className="nav-links">
-            <Link to="/results" className="nav-link active">
+            <Link to="/results" className={`nav-link ${location.pathname === '/results' ? 'active' : ''}`}>
               <BookOpen size={16} /> Semester Results Module
             </Link>
+            <Link to="/medical-disciplinary" className={`nav-link ${location.pathname === '/medical-disciplinary' ? 'active' : ''}`}>
+              <Heart size={16} /> Medical & Disciplinary
+            </Link>
             {user.role === 'admin' && (
-              <Link to="/admin" className="nav-link admin-link">
+              <Link to="/admin" className={`nav-link admin-link ${location.pathname === '/admin' ? 'active' : ''}`}>
                 <Shield size={16} /> Admin Control Panel
               </Link>
             )}

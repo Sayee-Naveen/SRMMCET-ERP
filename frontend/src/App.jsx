@@ -5,6 +5,7 @@ import Header from './components/Header';
 import Login from './pages/Login';
 import Results from './pages/Results';
 import AdminDashboard from './pages/AdminDashboard';
+import MedicalDisciplinary from './pages/MedicalDisciplinary';
 import { Toaster } from 'react-hot-toast';
 
 function ProtectedRoute({ children, adminOnly = false }) {
@@ -40,6 +41,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <Results />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/medical-disciplinary"
+                element={
+                  <ProtectedRoute>
+                    <MedicalDisciplinary />
                   </ProtectedRoute>
                 }
               />

@@ -1,15 +1,42 @@
 import os
 from sqlalchemy import create_engine
 from app.database import engine
-from app.models import Base, Course, GradeScale, Student, Subject, Faculty, Section, SectionStudent, FacultySection, Mark, SemesterResult
+from app.models import Base, Course, GradeScale, Student, Subject, Faculty, Section, SectionStudent, FacultySection, Mark, SemesterResult, MedicalRecord, DisciplinaryAction
 from sqlalchemy.orm import sessionmaker
 
 def seed_db():
+    Base.metadata.create_all(bind=engine)
     Session = sessionmaker(bind=engine)
     db = Session()
 
     # Check if courses exist
     if db.query(Course).count() > 0:
+        # Check if medical records exist; if not, seed them
+        if db.query(MedicalRecord).count() == 0:
+            st1 = db.query(Student).first()
+            if st1:
+                med1 = MedicalRecord(
+                    student_id=st1.student_id,
+                    record_type="Medical Leave",
+                    incident_date="2026-02-10",
+                    diagnosis_details="Viral fever and severe dehydration",
+                    doctor_hospital_name="Apollo Hospital, Madurai",
+                    treatment_prescribed="5 days medical rest and IV hydration",
+                    recorded_by="Dr. Arunkumar"
+                )
+                disc1 = DisciplinaryAction(
+                    student_id=st1.student_id,
+                    incident_date="2026-03-01",
+                    action_date="2026-03-03",
+                    category="Attendance Shortage",
+                    report_description="Student attendance dropped below 75% threshold in Semester 2.",
+                    action_taken="Parent Summoned",
+                    status="Active",
+                    recorded_by="Disciplinary Committee"
+                )
+                db.add_all([med1, disc1])
+                db.commit()
+                print("[SEED] Medical & Disciplinary initial sample records added.")
         print("[SEED] Database already contains seed data.")
         db.close()
         return
