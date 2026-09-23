@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from ..database import get_db
 from ..models import (
     Course, Subject, Student, Faculty, Section, SectionStudent,
-    FacultySection, Department, FacultyStudent
+    FacultySection, Department, FacultyStudent, AcademicSession, StudentCustomSubject
 )
 from ..schemas import (
     CourseCreate, CourseOut,
@@ -13,11 +13,49 @@ from ..schemas import (
     FacultyCreate, FacultyUpdate, FacultyOut,
     SectionCreate, SectionOut,
     DepartmentCreate, DepartmentOut,
-    AssignStudentsRequest
+    AssignStudentsRequest,
+    AcademicSessionCreate, AcademicSessionOut,
+    StudentCustomSubjectCreate, StudentCustomSubjectOut
 )
 from ..auth import require_admin
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"], dependencies=[Depends(require_admin)])
+
+# --- ACADEMIC SESSIONS CRUD (e.g. "Nov-Dec 2025", "Apr-May 2026") ---
+@router.get("/sessions", response_model=List[AcademicSessionOut])
+def get_all_sessions(db: Session = Depends(get_db)):
+    return db.query(AcademicSession).all()
+
+@router.post("/sessions", response_model=AcademicSessionOut)
+def create_session(req: AcademicSessionCreate, db: Session = Depends(get_db)):
+    existing = db.query(AcademicSession).filter(AcademicSession.session_name == req.session_name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="An examination session with this name already exists")
+    ses = AcademicSession(**req.model_dump())
+    db.add(ses)
+    db.commit()
+    db.refresh(ses)
+    return ses
+
+@router.put("/sessions/{session_id}", response_model=AcademicSessionOut)
+def update_session(session_id: int, req: AcademicSessionCreate, db: Session = Depends(get_db)):
+    ses = db.query(AcademicSession).filter(AcademicSession.session_id == session_id).first()
+    if not ses:
+        raise HTTPException(status_code=404, detail="Session not found")
+    for k, v in req.model_dump().items():
+        setattr(ses, k, v)
+    db.commit()
+    db.refresh(ses)
+    return ses
+
+@router.delete("/sessions/{session_id}")
+def delete_session(session_id: int, db: Session = Depends(get_db)):
+    ses = db.query(AcademicSession).filter(AcademicSession.session_id == session_id).first()
+    if not ses:
+        raise HTTPException(status_code=404, detail="Session not found")
+    db.delete(ses)
+    db.commit()
+    return {"message": "Academic session deleted successfully"}
 
 # --- DEPARTMENTS CRUD ---
 @router.get("/departments", response_model=List[DepartmentOut])
@@ -72,10 +110,70 @@ def create_subject(req: SubjectCreate, db: Session = Depends(get_db)):
     db.refresh(subject)
     return subject
 
-# --- STUDENTS CRUD & EDIT ---
+# --- AD-HOC / CUSTOM SUBJECT ASSIGNMENT (Honors, Minors, Naan Mudhalvan, Electives, Internship) ---
+@router.get("/students/{student_id}/custom-subjects", response_model=List[StudentCustomSubjectOut])
+def get_student_custom_subjects(student_id: int, db: Session = Depends(get_db)):
+    return db.query(StudentCustomSubject).filter(StudentCustomSubject.student_id == student_id).all()
+
+@router.post("/students/{student_id}/assign-subject", response_model=StudentCustomSubjectOut)
+def assign_custom_subject_to_student(student_id: int, req: StudentCustomSubjectCreate, db: Session = Depends(get_db)):
+    stu = db.query(Student).filter(Student.student_id == student_id).first()
+    if not stu:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    existing = db.query(StudentCustomSubject).filter(
+        StudentCustomSubject.student_id == student_id,
+        StudentCustomSubject.subject_id == req.subject_id,
+        StudentCustomSubject.semester == req.semester
+    ).first()
+
+    if existing:
+        raise HTTPException(status_code=400, detail="This custom subject is already assigned to this student for this semester")
+
+    rec = StudentCustomSubject(
+        student_id=student_id,
+        subject_id=req.subject_id,
+        semester=req.semester,
+        category=req.category,
+        session_id=req.session_id
+    )
+    db.add(rec)
+    db.commit()
+    db.refresh(rec)
+    return rec
+
+@router.delete("/custom-subjects/{id}")
+def remove_custom_subject(id: int, db: Session = Depends(get_db)):
+    rec = db.query(StudentCustomSubject).filter(StudentCustomSubject.id == id).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Record not found")
+    db.delete(rec)
+    db.commit()
+    return {"message": "Custom subject assignment removed"}
+
+# --- STUDENTS CRUD & EDIT (ENRICHED WITH ASSIGNED MENTOR) ---
 @router.get("/students", response_model=List[StudentOut])
 def get_admin_students(db: Session = Depends(get_db)):
-    return db.query(Student).all()
+    students = db.query(Student).all()
+    # Populate assigned faculty name
+    res = []
+    for s in students:
+        # Check direct assignment
+        mentor = db.query(FacultyStudent).filter(FacultyStudent.student_id == s.student_id).first()
+        mentor_name = mentor.faculty.full_name if mentor and mentor.faculty else None
+
+        if not mentor_name:
+            # Check section assignment
+            sec_stu = db.query(SectionStudent).filter(SectionStudent.student_id == s.student_id).first()
+            if sec_stu:
+                fac_sec = db.query(FacultySection).filter(FacultySection.section_id == sec_stu.section_id).first()
+                if fac_sec and fac_sec.faculty:
+                    mentor_name = fac_sec.faculty.full_name
+
+        s_out = StudentOut.model_validate(s)
+        s_out.assigned_faculty_name = mentor_name or "Unassigned"
+        res.append(s_out)
+    return res
 
 @router.post("/students", response_model=StudentOut)
 def create_student(req: StudentCreate, db: Session = Depends(get_db)):
@@ -108,10 +206,22 @@ def delete_student(student_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Student deactivated successfully"}
 
-# --- FACULTY CRUD & EDIT ---
+# --- FACULTY CRUD & EDIT (ENRICHED WITH ASSIGNED STUDENT COUNT) ---
 @router.get("/faculty", response_model=List[FacultyOut])
 def get_all_faculty(db: Session = Depends(get_db)):
-    return db.query(Faculty).all()
+    faculties = db.query(Faculty).all()
+    res = []
+    for f in faculties:
+        # Count direct students
+        direct_count = db.query(FacultyStudent).filter(FacultyStudent.faculty_id == f.faculty_id).count()
+        # Count section students
+        sec_ids = [fs.section_id for fs in db.query(FacultySection).filter(FacultySection.faculty_id == f.faculty_id).all()]
+        sec_count = db.query(SectionStudent).filter(SectionStudent.section_id.in_(sec_ids)).count() if sec_ids else 0
+
+        f_out = FacultyOut.model_validate(f)
+        f_out.assigned_students_count = direct_count + sec_count
+        res.append(f_out)
+    return res
 
 @router.post("/faculty", response_model=FacultyOut)
 def create_faculty(req: FacultyCreate, db: Session = Depends(get_db)):

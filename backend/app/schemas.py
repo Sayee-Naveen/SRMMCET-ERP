@@ -15,6 +15,20 @@ class TokenResponse(BaseModel):
     username: str
     full_name: str
 
+# Academic Session Schemas
+class AcademicSessionBase(BaseModel):
+    session_name: str # e.g. "Nov-Dec 2025", "Apr-May 2026"
+    academic_year: str # e.g. "2025-2026"
+    is_active: bool = True
+
+class AcademicSessionCreate(AcademicSessionBase):
+    pass
+
+class AcademicSessionOut(AcademicSessionBase):
+    session_id: int
+    class Config:
+        from_attributes = True
+
 # Department Schemas
 class DepartmentBase(BaseModel):
     dept_name: str
@@ -72,6 +86,7 @@ class StudentOut(StudentBase):
     student_id: int
     is_active: bool
     course: Optional[CourseOut] = None
+    assigned_faculty_name: Optional[str] = None
     class Config:
         from_attributes = True
 
@@ -84,6 +99,7 @@ class SubjectBase(BaseModel):
     semester: int
     course_id: int
     regulation: str
+    category: str = "Core" # Core, Professional Elective, Open Elective, Honors, Minors, Naan Mudhalvan, Internship, Project
 
 class SubjectCreate(SubjectBase):
     pass
@@ -91,6 +107,23 @@ class SubjectCreate(SubjectBase):
 class SubjectOut(SubjectBase):
     subject_id: int
     is_active: bool
+    class Config:
+        from_attributes = True
+
+# Student Custom Subject Schemas (Honors / Minors / Naan Mudhalvan / Electives)
+class StudentCustomSubjectBase(BaseModel):
+    student_id: int
+    subject_id: int
+    semester: int
+    category: str = "Ad-hoc"
+    session_id: Optional[int] = None
+
+class StudentCustomSubjectCreate(StudentCustomSubjectBase):
+    pass
+
+class StudentCustomSubjectOut(StudentCustomSubjectBase):
+    id: int
+    subject: Optional[SubjectOut] = None
     class Config:
         from_attributes = True
 
@@ -117,6 +150,7 @@ class SemesterSheetItem(BaseModel):
     original_semester: int
     is_arrear: bool
     attempt: int
+    category: str = "Core" # Core, Arrear, Honors, Minors, Elective, Naan Mudhalvan, Internship, Project
     grade_letter: str = ""
     grade_point: float = 0.0
     is_pass: bool = True
@@ -142,6 +176,7 @@ class MarkOut(BaseModel):
     grade_letter: str
     grade_point: float
     is_pass: bool
+    session_id: Optional[int] = None
     subject: Optional[SubjectOut] = None
     class Config:
         from_attributes = True
@@ -176,6 +211,7 @@ class FacultyUpdate(BaseModel):
 class FacultyOut(FacultyBase):
     faculty_id: int
     is_active: bool
+    assigned_students_count: Optional[int] = 0
     class Config:
         from_attributes = True
 

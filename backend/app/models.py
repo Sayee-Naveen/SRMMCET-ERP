@@ -10,6 +10,14 @@ class Department(Base):
     dept_name = Column(String(100), nullable=False, unique=True)
     dept_code = Column(String(20), nullable=False, unique=True)
 
+class AcademicSession(Base):
+    __tablename__ = "academic_sessions"
+
+    session_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    session_name = Column(String(50), nullable=False, unique=True) # e.g. "Nov-Dec 2025", "Apr-May 2026"
+    academic_year = Column(String(20), nullable=False) # e.g. "2025-2026"
+    is_active = Column(Boolean, default=True)
+
 class Course(Base):
     __tablename__ = "courses"
 
@@ -41,8 +49,7 @@ class Student(Base):
     course = relationship("Course", back_populates="students")
     section_assignments = relationship("SectionStudent", back_populates="student")
     faculty_assignments = relationship("FacultyStudent", back_populates="student")
-    medical_records = relationship("MedicalRecord", back_populates="student")
-    disciplinary_actions = relationship("DisciplinaryAction", back_populates="student")
+    custom_subjects = relationship("StudentCustomSubject", back_populates="student")
 
 class GradeScale(Base):
     __tablename__ = "grade_scale"
@@ -63,14 +70,29 @@ class Subject(Base):
     subject_code = Column(String(20), nullable=False)
     subject_name = Column(String(200), nullable=False)
     credits = Column(Float, nullable=False)
-    subject_type = Column(String(20), nullable=False) # Theory, Practical, Activity
+    subject_type = Column(String(20), nullable=False) # Theory, Practical, Activity, Project
     semester = Column(Integer, nullable=False)
     course_id = Column(Integer, ForeignKey("courses.course_id"), nullable=False)
     regulation = Column(String(10), nullable=False)
+    category = Column(String(50), default="Core") # Core, Professional Elective, Open Elective, Honors, Minors, Naan Mudhalvan, Internship, Project
     is_active = Column(Boolean, default=True)
 
     course = relationship("Course", back_populates="subjects")
     marks = relationship("Mark", back_populates="subject")
+
+class StudentCustomSubject(Base):
+    __tablename__ = "student_custom_subjects"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    student_id = Column(Integer, ForeignKey("students.student_id"), nullable=False)
+    subject_id = Column(Integer, ForeignKey("subjects.subject_id"), nullable=False)
+    semester = Column(Integer, nullable=False)
+    category = Column(String(50), default="Ad-hoc") # Honors, Minors, Elective, Naan Mudhalvan, Internship, Project
+    session_id = Column(Integer, ForeignKey("academic_sessions.session_id"), nullable=True)
+
+    student = relationship("Student", back_populates="custom_subjects")
+    subject = relationship("Subject")
+    session = relationship("AcademicSession")
 
 class Faculty(Base):
     __tablename__ = "faculty"
@@ -140,11 +162,13 @@ class Mark(Base):
     grade_letter = Column(String(5), nullable=False)
     grade_point = Column(Float, nullable=False)
     is_pass = Column(Boolean, default=True)
+    session_id = Column(Integer, ForeignKey("academic_sessions.session_id"), nullable=True)
     entered_by = Column(Integer, nullable=True)
     entered_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     subject = relationship("Subject", back_populates="marks")
+    session = relationship("AcademicSession")
 
 class SemesterResult(Base):
     __tablename__ = "semester_results"
@@ -156,42 +180,3 @@ class SemesterResult(Base):
     cgpa = Column(Float, nullable=False)
     total_credits = Column(Float, nullable=False)
     computed_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-class MedicalRecord(Base):
-    __tablename__ = "medical_records"
-
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    student_id = Column(Integer, ForeignKey("students.student_id"), nullable=False, index=True)
-    record_type = Column(String(50), nullable=False) # Routine Checkup, Emergency, Medical Leave, Chronic Condition, Allergy Notice
-    incident_date = Column(String(20), nullable=False)
-    diagnosis_details = Column(Text, nullable=False)
-    doctor_hospital_name = Column(String(150), nullable=True)
-    treatment_prescribed = Column(Text, nullable=True)
-    document_url = Column(String(255), nullable=True)
-    signature_url = Column(String(255), nullable=True)
-    recorded_by = Column(String(100), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    student = relationship("Student", back_populates="medical_records")
-
-class DisciplinaryAction(Base):
-    __tablename__ = "disciplinary_actions"
-
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    student_id = Column(Integer, ForeignKey("students.student_id"), nullable=False, index=True)
-    incident_date = Column(String(20), nullable=False)
-    action_date = Column(String(20), nullable=False)
-    category = Column(String(100), nullable=False) # Attendance Shortage, Misconduct, Academic Malpractice, Property Damage, Other
-    report_description = Column(Text, nullable=False)
-    action_taken = Column(String(100), nullable=False) # Verbal Warning, Written Warning, Parent Summoned, Fine Imposed, Suspension, Expulsion
-    status = Column(String(30), default="Active") # Pending Review, Active, Resolved, Revoked
-    supporting_doc_url = Column(String(255), nullable=True)
-    student_signature_url = Column(String(255), nullable=True)
-    authority_signature_url = Column(String(255), nullable=True)
-    recorded_by = Column(String(100), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    student = relationship("Student", back_populates="disciplinary_actions")
-
