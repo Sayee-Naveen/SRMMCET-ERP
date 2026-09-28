@@ -66,7 +66,7 @@ export default function MedicalDisciplinary() {
   const fetchStudents = async () => {
     setLoadingStudents(true);
     try {
-      const res = await API.get('/students');
+      const res = await API.get('/students?all_students=true');
       setStudents(res.data);
       if (res.data.length > 0) {
         setSelectedStudentId(res.data[0].student_id);

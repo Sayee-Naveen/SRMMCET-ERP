@@ -233,3 +233,95 @@ class SectionOut(SectionBase):
 
 class AssignStudentsRequest(BaseModel):
     student_ids: List[int]
+
+# ---- Extra-Curricular Activity Schemas ----
+
+class ECCertificateBase(BaseModel):
+    certificate_no: Optional[str] = None
+    title: Optional[str] = None
+    issuing_authority: Optional[str] = None
+    issue_date: Optional[str] = None
+    file_url: Optional[str] = None
+    file_type: Optional[str] = "image/png"
+
+class ECCertificateCreate(ECCertificateBase):
+    pass
+
+class ECCertificateOut(ECCertificateBase):
+    id: int
+    activity_id: int
+    created_at: Optional[datetime] = None
+    class Config:
+        from_attributes = True
+
+class ECActivityBase(BaseModel):
+    reg_no: str
+    regulation: Optional[str] = "R2021"
+    category: str
+    sub_category: str
+    title: str
+    organizer: str
+    level: str = "College"
+    role: str = "Participant"
+    achievement: str = "Completed"
+    event_date: str
+    academic_year: str = "2024-2025"
+    semester: int = 1
+    description: Optional[str] = None
+
+class ECActivityCreate(ECActivityBase):
+    certificate: Optional[ECCertificateCreate] = None
+
+class ECActivityUpdate(BaseModel):
+    regulation: Optional[str] = None
+    category: Optional[str] = None
+    sub_category: Optional[str] = None
+    title: Optional[str] = None
+    organizer: Optional[str] = None
+    level: Optional[str] = None
+    role: Optional[str] = None
+    achievement: Optional[str] = None
+    event_date: Optional[str] = None
+    academic_year: Optional[str] = None
+    semester: Optional[int] = None
+    description: Optional[str] = None
+
+class ECActivityOut(ECActivityBase):
+    id: int
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    certificates: List[ECCertificateOut] = []
+    class Config:
+        from_attributes = True
+
+class ECStudentPortfolioOut(BaseModel):
+    student: StudentOut
+    total_activities: int
+    total_certificates: int
+    total_awards: int
+    activities: List[ECActivityOut]
+
+class ECCategoryOut(BaseModel):
+    id: int
+    category_code: str
+    display_name: str
+    description: Optional[str] = None
+    icon_name: str
+    badge_color: str
+    display_order: int
+    class Config:
+        from_attributes = True
+
+class ECCategoryMetric(BaseModel):
+    category: str
+    count: int
+    certificates_count: int
+
+class ECAnalyticsSummaryOut(BaseModel):
+    total_activities: int
+    total_certificates: int
+    total_awards: int
+    total_students_participated: int
+    category_breakdown: List[ECCategoryMetric]
+    recent_activities: List[ECActivityOut]
+

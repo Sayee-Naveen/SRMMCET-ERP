@@ -56,15 +56,12 @@ export default function Header() {
             <Link to="/medical-disciplinary" className={`nav-link ${location.pathname === '/medical-disciplinary' ? 'active' : ''}`}>
               <Heart size={16} /> Medical & Disciplinary
             </Link>
-            <a
-              href="http://localhost:5174"
-              target="_blank"
-              rel="noreferrer"
-              className="nav-link"
-              title="Open Extra-Curricular Activities Module in separate window"
+            <Link
+              to="/extra-curricular"
+              className={`nav-link ${location.pathname.startsWith('/extra-curricular') ? 'active' : ''}`}
             >
               <Trophy size={16} /> Extra-Curricular Activities
-            </a>
+            </Link>
             {user.role === 'admin' && (
               <Link to="/admin" className={`nav-link admin-link ${location.pathname === '/admin' ? 'active' : ''}`}>
                 <Shield size={16} /> Admin Control Panel

@@ -6,6 +6,10 @@ import Login from './pages/Login';
 import Results from './pages/Results';
 import AdminDashboard from './pages/AdminDashboard';
 import MedicalDisciplinary from './pages/MedicalDisciplinary';
+import ECDashboard from './pages/ECDashboard';
+import ECActivitiesList from './pages/ECActivitiesList';
+import ECStudentPortfolio from './pages/ECStudentPortfolio';
+import ECCertificateVault from './pages/ECCertificateVault';
 import { Toaster } from 'react-hot-toast';
 
 function ProtectedRoute({ children, adminOnly = false }) {
@@ -49,6 +53,38 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <MedicalDisciplinary />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/extra-curricular"
+                element={
+                  <ProtectedRoute>
+                    <ECDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/extra-curricular/activities"
+                element={
+                  <ProtectedRoute>
+                    <ECActivitiesList />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/extra-curricular/portfolio"
+                element={
+                  <ProtectedRoute>
+                    <ECStudentPortfolio />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/extra-curricular/certificates"
+                element={
+                  <ProtectedRoute>
+                    <ECCertificateVault />
                   </ProtectedRoute>
                 }
               />

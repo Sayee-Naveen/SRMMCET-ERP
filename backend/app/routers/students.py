@@ -9,8 +9,12 @@ from ..auth import get_current_user
 router = APIRouter(prefix="/api/students", tags=["Students"])
 
 @router.get("", response_model=List[StudentOut])
-def get_students(current_user: Faculty = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.role == "admin":
+def get_students(
+    all_students: bool = False,
+    current_user: Faculty = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role == "admin" or all_students:
         return db.query(Student).filter(Student.is_active == True).all()
 
     # Section assignments
@@ -27,6 +31,10 @@ def get_students(current_user: Faculty = Depends(get_current_user), db: Session 
     ]
 
     all_assigned_ids = list(set(section_student_ids + direct_student_ids))
+
+    if not all_assigned_ids:
+        # If no specific assignment exists, allow faculty access to active student directory
+        return db.query(Student).filter(Student.is_active == True).all()
 
     students = db.query(Student).filter(Student.student_id.in_(all_assigned_ids), Student.is_active == True).all()
     return students

@@ -52,6 +52,7 @@ class Student(Base):
     custom_subjects = relationship("StudentCustomSubject", back_populates="student")
     medical_records = relationship("MedicalRecord", back_populates="student")
     disciplinary_actions = relationship("DisciplinaryAction", back_populates="student")
+    activities = relationship("ExtraCurricularActivity", back_populates="student")
 
 class GradeScale(Base):
     __tablename__ = "grade_scale"
@@ -220,3 +221,54 @@ class DisciplinaryAction(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     student = relationship("Student", back_populates="disciplinary_actions")
+
+# ---- Extra-Curricular Activities Models ----
+
+class ActivityCategory(Base):
+    __tablename__ = "activity_categories"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    category_code = Column(String(50), unique=True, nullable=False)
+    display_name = Column(String(100), nullable=False)
+    description = Column(String(255), nullable=True)
+    icon_name = Column(String(50), default="Award")
+    badge_color = Column(String(50), default="blue")
+    display_order = Column(Integer, default=1)
+
+class ExtraCurricularActivity(Base):
+    __tablename__ = "extra_curricular_activities"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    reg_no = Column(String(20), ForeignKey("students.reg_no"), nullable=False, index=True)
+    regulation = Column(String(10), default="R2021", nullable=False)
+    category = Column(String(50), nullable=False, index=True)
+    sub_category = Column(String(100), nullable=False)
+    title = Column(String(200), nullable=False)
+    organizer = Column(String(150), nullable=False)
+    level = Column(String(50), default="College")
+    role = Column(String(50), default="Participant")
+    achievement = Column(String(100), default="Completed")
+    event_date = Column(String(20), nullable=False)
+    academic_year = Column(String(20), default="2024-2025")
+    semester = Column(Integer, default=1)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    student = relationship("Student", back_populates="activities")
+    certificates = relationship("ActivityCertificate", back_populates="activity", cascade="all, delete-orphan")
+
+class ActivityCertificate(Base):
+    __tablename__ = "activity_certificates"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    activity_id = Column(Integer, ForeignKey("extra_curricular_activities.id"), nullable=False)
+    certificate_no = Column(String(60), nullable=True, index=True)
+    title = Column(String(200), nullable=True)
+    issuing_authority = Column(String(150), nullable=True)
+    issue_date = Column(String(20), nullable=True)
+    file_url = Column(String(300), nullable=True)
+    file_type = Column(String(50), default="image/png")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    activity = relationship("ExtraCurricularActivity", back_populates="certificates")
