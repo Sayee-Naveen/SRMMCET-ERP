@@ -13,4 +13,21 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
+// Response interceptor: auto-logout on 401 Unauthorized
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('srm_erp_token');
+      localStorage.removeItem('srm_erp_role');
+      localStorage.removeItem('srm_erp_username');
+      localStorage.removeItem('srm_erp_fullname');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default API;

@@ -14,7 +14,7 @@ from .models import Faculty
 
 SECRET_KEY = os.getenv("SECRET_KEY", "srm_erp_secret_key_stark_2026_super_secure")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 24 hours
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 30  # 30 days for reliable dev/demo sessions
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
 

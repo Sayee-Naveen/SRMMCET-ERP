@@ -13,7 +13,21 @@ export const AuthProvider = ({ children }) => {
     const fullName = localStorage.getItem('srm_erp_fullname');
 
     if (token && role && username) {
-      setUser({ token, role, username, fullName });
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+          // Token expired, clear storage
+          localStorage.removeItem('srm_erp_token');
+          localStorage.removeItem('srm_erp_role');
+          localStorage.removeItem('srm_erp_username');
+          localStorage.removeItem('srm_erp_fullname');
+          setUser(null);
+        } else {
+          setUser({ token, role, username, fullName });
+        }
+      } catch (e) {
+        setUser({ token, role, username, fullName });
+      }
     }
     setLoading(false);
   }, []);
