@@ -1,0 +1,47 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from typing import List
+from ..database import get_db
+from ..models import Student, FacultySection, SectionStudent, Faculty, Course, FacultyStudent
+from ..schemas import StudentOut
+from ..auth import get_current_user
+
+router = APIRouter(prefix="/api/students", tags=["Students"])
+
+@router.get("", response_model=List[StudentOut])
+def get_students(
+    all_students: bool = False,
+    current_user: Faculty = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role == "admin" or all_students:
+        return db.query(Student).filter(Student.is_active == True).all()
+
+    # Section assignments
+    assigned_section_ids = [
+        fs.section_id for fs in db.query(FacultySection).filter(FacultySection.faculty_id == current_user.faculty_id).all()
+    ]
+    section_student_ids = [
+        ss.student_id for ss in db.query(SectionStudent).filter(SectionStudent.section_id.in_(assigned_section_ids)).all()
+    ]
+
+    # Direct faculty-student assignments
+    direct_student_ids = [
+        fs.student_id for fs in db.query(FacultyStudent).filter(FacultyStudent.faculty_id == current_user.faculty_id).all()
+    ]
+
+    all_assigned_ids = list(set(section_student_ids + direct_student_ids))
+
+    if not all_assigned_ids:
+        # If no specific assignment exists, allow faculty access to active student directory
+        return db.query(Student).filter(Student.is_active == True).all()
+
+    students = db.query(Student).filter(Student.student_id.in_(all_assigned_ids), Student.is_active == True).all()
+    return students
+
+@router.get("/{reg_no}", response_model=StudentOut)
+def get_student_by_reg(reg_no: str, current_user: Faculty = Depends(get_current_user), db: Session = Depends(get_db)):
+    student = db.query(Student).filter(Student.reg_no == reg_no, Student.is_active == True).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    return student
